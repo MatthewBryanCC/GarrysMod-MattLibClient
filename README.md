@@ -7,11 +7,11 @@ A simple client used for abusing gamemodes on Garry's mod servers.
 3. Download and install CheatEngine 7.2 or higher.
 
 ## Setup for running on other servers
-**Note:** We do these steps below so we can target the hex value that controls if we can run our lua script on our server. We can proceed to join another server and change this value for ourselves at will with CheatEngine.
+**Note:** We do these steps below so we can target the hex value that controls if we can run our lua script on our server. We can proceed to join another server and change this value for ourselves, at will, with CheatEngine.
 
 1. Open Garry's Mod and launch a local multiplayer server with at least 2 slots. 
-2. Open CheatEngine and client the computer icon, this will allow you to select Garry's Mod.
-3. Go back into Garry's Mod, open the console with the ` key (under escape). Type in 'sv_cheats 1'.
+2. Open CheatEngine and click the computer icon, this will allow you to select Garry's Mod.
+3. Go back into Garry's Mod, open the console with the ` key (tilda key, under escape). Type in 'sv_cheats 1'. **You may need to open the options menu and enable the console before you are able to press `.**
 4. Then type in 'sv_allowcslua 100'.
 5. Tab back into CheatEngine. In the hex value search bar, type '100'. Begin a new search.
 6. Go back into Garry's Mod and open the console, and type 'sv_allowcslua 101'.
