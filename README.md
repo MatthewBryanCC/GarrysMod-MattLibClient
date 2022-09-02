@@ -11,7 +11,7 @@ A simple client used for abusing gamemodes on Garry's mod servers.
 
 1. Open Garry's Mod and launch a local multiplayer server with at least 2 slots. 
 2. Open CheatEngine and click the computer icon, this will allow you to select Garry's Mod.
-3. Go back into Garry's Mod, open the console with the ` key (tilda key, under escape). Type in 'sv_cheats 1'. **You may need to open the options menu and enable the console before you are able to press `.**
+3. Go back into Garry's Mod, open the console with the ` key (tilda key, under escape). Type in "sv_cheats 1". **Note: You may need to open the options menu and enable the console before you are able to open the menu.**
 4. Then type in 'sv_allowcslua 100'.
 5. Tab back into CheatEngine. In the hex value search bar, type '100'. Begin a new search.
 6. Go back into Garry's Mod and open the console, and type 'sv_allowcslua 101'.
