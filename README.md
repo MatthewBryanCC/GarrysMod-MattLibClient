@@ -36,11 +36,3 @@ A simple client used for abusing gamemodes on Garry's mod servers.
 5. If all done correctly, double tapping control rapidly will open the client!
 
 ### The rest of the client should be pretty self explainitory to use :). Have fun cheating.
-<<<<<<< Updated upstream
-
-## Coming features
-1. Prop detection for prop hunt.
-2. Traitor detector for TTT.
-These are both actually done, but they're on my other computer and can't be bothered getting them yet. Send and issue if you really want me to update.
-=======
->>>>>>> Stashed changes
