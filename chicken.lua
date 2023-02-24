@@ -1,4 +1,9 @@
 MattLib = {
+	
+	Settings = {
+		PRINTER_MODEL = "models/props_c17/consolebox01a.mdl"
+	},
+	
 	Enabled = false,
 	TargetPlayer = nil,
 	ActiveKeys = {
@@ -10,19 +15,32 @@ MattLib = {
 		WorkPanel = nil,
 		OptionsBasePanel = nil,
 		OptionsWorkPanel = nil,
+		TTTWeaponScannerPanel = nil,
 	},
 	
 	Commands = {
-		PlayerESP = {
-			Active = false
-		},
 		PlayerHalos = {
-			Active = false
+			Active = false,
+			Continuous = false,
+			Teams = true,
 		},
 		PlayerAimbot = {
-			Active = false
+			Active = false,
+			Continuous = false,
+			AutoTarget = false
 		},
-		
+		TTTWeaponScanner = {
+			Active = false,
+			Continuous = true
+		},
+		PropFinder = {
+			Active = false,
+			Continuous = false
+		},
+		PrinterFinder = {
+			Active = false,
+			Continuous = false
+		},
 	},
 	KeyBinds = {
 		PlayerAimbot = nil
@@ -38,6 +56,8 @@ KeyLib = {
 		Name = "ALT1"
 	}
 }
+local twep = { "weapon_ttt_c4", "weapon_ttt_knife", "weapon_ttt_phammer", "weapon_ttt_sipistol", "weapon_ttt_flaregun", "weapon_ttt_push", "weapon_ttt_radio", "weapon_ttt_teleport", "(Disguise)" ,"spiderman's_swep", "weapon_ttt_trait_defilibrator", "weapon_ttt_xbow", "weapon_ttt_dhook", "weapon_awp", "weapon_jihadbomb", "weapon_ttt_knife", "weapon_ttt_c4", "weapon_ttt_decoy", "weapon_ttt_flaregun", "weapon_ttt_phammer", "weapon_ttt_push", "weapon_ttt_radio", "weapon_ttt_sipistol", "weapon_ttt_teleport", "weapon_ttt_awp", "weapon_ttt_silencedsniper", "weapon_ttt_turtlenade", "weapon_ttt_death_station", "weapon_ttt_sg552", "weapon_ttt_tripmine"}
+
 local width, height = ScrW(), ScrH()
 -- MATTLIB FUNCTIONALITY -- 
 function MattLib:ShowGUI()
@@ -67,10 +87,12 @@ function MattLib:CreateBaseFrame()
 	frame.Paint = function(self, w, h)
 		draw.RoundedBox(0, 0, 0, w, h, Color(0,155,155))
 		draw.SimpleText("MattLib Hack Menu", "Trebuchet24", w/2,h + 30, Color(255,255,255,255), 1, 1)
-	end  
+	end
+	frame:SetDraggable(true)
+	frame:SetPaintShadow(true)
 	frame:ShowCloseButton(true)
 	frame:SetVisible(true)
-	frame:SetTitle("MattLib - Hack Client Alpha v0.1")
+	frame:SetTitle("MattLib - Hack Client Alpha v1.1")
 	self.Panels.Frame = frame
 	frame:MakePopup() 
 	
@@ -111,6 +133,8 @@ function MattLib:CreateOptionsPanel(workPanel)
 		draw.RoundedBox(0,0,0,w,h,Color(70,70,70))
 		draw.RoundedBox(0,2,2,w-4,h * 0.1,Color(40,40,40))
 		draw.SimpleText("Options", "Trebuchet18", w/2, (wPanelSizeY - 10) * 0.055, Color(255,255,255), 1, 1)
+		draw.RoundedBox(0, 10, 10, (w*.4)-20, (h*0.1) - 15, Color(70,70,70))
+		draw.RoundedBox(0, w- (w*.4) + 10, 10, (w*.4)-20, (h*0.1) - 15, Color(70,70,70))
 	end
 	self.Panels.OptionsBasePanel = optionsBasePanel
 	return optionsBasePanel
@@ -373,7 +397,7 @@ function MattLib:HandleKeyBinds()
 		else continue end
 	end
 	
-	
+	--Key bind for opening menu
 	if input.IsKeyDown(KEY_LCONTROL) then
 		if self.CtrlDown then return end
 		self.CtrlDown = true
@@ -391,6 +415,17 @@ function MattLib:HandleKeyBinds()
 	end
 end
 
+function MattLib:HandleContinuousFunctions()
+	for commandName, commandState in pairs(self.Commands) do
+		if commandState.Continuous == true then
+			Continuous_Functions[commandName]()
+		end
+	end
+	
+	if LocalPlayer() and LocalPlayer():GetActiveWeapon() and LocalPlayer():GetActiveWeapon().Primary then
+        LocalPlayer():GetActiveWeapon().Primary.Recoil = 0
+    end
+end
 Build_Command_Options = {
 	PlayerHalos = function()
 		workFrame = MattLib:CreateOptionsWorkPanel(MattLib.Panels.OptionsBasePanel, false)
@@ -415,16 +450,19 @@ Build_Command_Options = {
 		drawInfoText:SetColor(Color(255,255,255))
 		drawInfoText:SetPos( 20, 50 )
 		drawInfoText:SizeToContents()
+		local drawTeamText = vgui.Create("DLabel", workFrame)
+		drawTeamText:SetText("Draw Team Info: ")
+		drawTeamText:SetFont("Trebuchet24")
+		drawTeamText:SetColor(Color(255,255,255))
+		drawTeamText:SetPos( 20, 80 )
+		drawTeamText:SizeToContents()
 		
 		textSizeX, textSizeY = drawHalosText:GetSize()
 		--Create Check boxes
 		//Halo check box
 		local halosEnabledCheckbox = vgui.Create("DCheckBox", workFrame)
 		halosEnabledCheckbox:SetPos(20 + textSizeX, 24)
-		halosEnabledCheckbox:SetValue(false)
-		PrintTable(hook.GetTable()["PreDrawHalos"])
-		local isEnabled = table.HasValue(table.GetKeys(hook.GetTable()["PreDrawHalos"]), "PaintHalos_PlayerFinder")
-		halosEnabledCheckbox:SetValue(isEnabled)
+		halosEnabledCheckbox:SetValue(MattLib.Commands.PlayerHalos.Active)
 		halosEnabledCheckbox.OnChange = function()
 			local value = halosEnabledCheckbox:GetChecked()
 			if value then
@@ -454,16 +492,28 @@ Build_Command_Options = {
 			end
 		end
 		
-	end,
-	PlayerESP = function(workFrame)
-	
+		// Teams Check box
+		local teamsEnabledCheckbox = vgui.Create("DCheckBox", workFrame)
+		teamsEnabledCheckbox:SetPos(20 + textSizeX, 84)
+		teamsEnabledCheckbox:SetValue(MattLib.Commands.PlayerHalos.Teams)
+		teamsEnabledCheckbox.OnChange = function()
+			local value = teamsEnabledCheckbox:GetChecked()
+			if value then
+				MattLib:AddChat(Color(255,0,0), "[MattLib]", Color(255,255,255), ": Player teams info enabled.")
+				MattLib.Commands.PlayerHalos.Teams = true
+			else
+				MattLib:AddChat(Color(255,0,0), "[MattLib]", Color(255,255,255), ": Player teams info disabled.")
+				MattLib.Commands.PlayerHalos.Teams = false
+			end
+		end
+		
 	end,
 	PlayerAimbot = function()
 		
 		workFrame = MattLib:CreateOptionsWorkPanel(MattLib.Panels.OptionsBasePanel, false) --Create fresh options work frame
-		
 		dropDownBase = MattLib:CreateDropdown(workFrame) --Add target drop down
-
+		local wFrameSizeX, wFrameSizeY = workFrame:GetSize()
+		
 		--Key bind Label
 		local keyBindLabel = vgui.Create("DLabel", workFrame) --Y addition must be 60 down.
 		keyBindLabel:SetPos(20, 85)
@@ -472,7 +522,7 @@ Build_Command_Options = {
 		keyBindLabel:SetColor(Color(255,255,255))
 		keyBindLabel:SizeToContents()
 		local textSizeX, textSizeY = keyBindLabel:GetSize()
-		local wFrameSizeX, wFrameSizeY = workFrame:GetSize()
+		
 		
 		local bindKeySizeX, bindKeySizeY = (wFrameSizeX - (40 + textSizeX)), 30
 		local bindKeyX, bindKeyY = (30 + textSizeX), (85 + (textSizeY/2) - 15)
@@ -486,15 +536,102 @@ Build_Command_Options = {
 		--Add keybind button
 		local bindKeyType = "PlayerAimbot"
 		MattLib:CreateKeybindButton(bindKeyType, workFrame, bindKeyDimensions)
+		
+		--Add automatic targeting to closest player checkbox and label
+		local autoTargetLabel = vgui.Create("DLabel", workFrame)
+		autoTargetLabel:SetPos(20, bindKeyY + 50)
+		autoTargetLabel:SetText("Automatic Targeting (Closest Player):")
+		autoTargetLabel:SetFont("Trebuchet18")
+		autoTargetLabel:SetColor(Color(255,255,255))
+		autoTargetLabel:SizeToContents()
+		
+		local autoTargetTextSizeX, autoTargetTextSizeY = autoTargetLabel:GetSize()
+		local autoTargetCheckbox = vgui.Create("DCheckBox", workFrame)
+		autoTargetCheckbox:SetChecked(MattLib.Commands.PlayerAimbot.AutoTarget)
+		autoTargetCheckbox:SetPos(autoTargetTextSizeX + 40, bindKeyY + 50)
+		autoTargetCheckbox:SetValue(MattLib.Commands.PlayerAimbot.AutoTarget)
+		autoTargetCheckbox.OnChange = function()
+			local value = autoTargetCheckbox:GetChecked()
+			MattLib.Commands.PlayerAimbot.AutoTarget = value
+		end
+		
+		
 	end,
-	
+	TTTWeaponScanner = function()
+		workFrame = MattLib:CreateOptionsWorkPanel(MattLib.Panels.OptionsBasePanel, false) --Create fresh options work frame
+		
+		local enableScannerText = vgui.Create("DLabel", workFrame)
+		enableScannerText:SetText("Enable TTT Scanner: ")
+		enableScannerText:SetFont("Trebuchet24")
+		enableScannerText:SetColor(Color(255,255,255))
+		enableScannerText:SetPos( 20, 20 )
+		enableScannerText:SizeToContents()
+		
+		local textSizeX, textSizeY = enableScannerText:GetSize()
+		
+		local enabledCheckbox =  vgui.Create("DCheckBox", workFrame)
+		enabledCheckbox:SetChecked(MattLib.Commands.TTTWeaponScanner.Active)
+		enabledCheckbox:SetPos(20 + textSizeX, 24)
+		enabledCheckbox:SetValue(false)
+		enabledCheckbox.OnChange = function()
+			local value = enabledCheckbox:GetChecked()
+			MattLib.Commands.TTTWeaponScanner.Active = value
+		end
+	end,	
+	PropFinder = function()
+		workFrame = MattLib:CreateOptionsWorkPanel(MattLib.Panels.OptionsBasePanel, false) --Create fresh options work frame
+		
+		local enablePropFinderText = vgui.Create("DLabel", workFrame)
+		enablePropFinderText:SetText("Enable Prop Hunt Player finder: ")
+		enablePropFinderText:SetFont("Trebuchet24")
+		enablePropFinderText:SetColor(Color(255,255,255))
+		enablePropFinderText:SetPos( 20, 20 )
+		enablePropFinderText:SizeToContents()
+		
+		local textSizeX, textSizeY = enablePropFinderText:GetSize()
+		
+		local enabledCheckbox = vgui.Create("DCheckBox", workFrame)
+		enabledCheckbox:SetChecked(MattLib.Commands.PropFinder.Active)
+		enabledCheckbox:SetPos(20 + textSizeX, 24)
+		enabledCheckbox.OnChange = function()
+			local value = enabledCheckbox:GetChecked()
+			MattLib.Commands.PropFinder.Active = value
+			Command_Functions.PropFinder(value)
+		end
+	end,
+	PrinterFinder = function()
+		workFrame = MattLib:CreateOptionsWorkPanel(MattLib.Panels.OptionsBasePanel, false) --Create fresh options work frame
+		
+		local enablePrinterFinderText = vgui.Create("DLabel", workFrame)
+		enablePrinterFinderText:SetText("Enable RolePlayer Printer Finder: ")
+		enablePrinterFinderText:SetFont("Trebuchet24")
+		enablePrinterFinderText:SetColor(Color(255,255,255))
+		enablePrinterFinderText:SetPos( 20, 20 )
+		enablePrinterFinderText:SizeToContents()
+		
+		local textSizeX, textSizeY = enablePrinterFinderText:GetSize()
+		
+		local enabledPrinterCheckbox =  vgui.Create("DCheckBox", workFrame)
+		enabledPrinterCheckbox:SetChecked(MattLib.Commands.PrinterFinder.Active)
+		enabledPrinterCheckbox:SetPos(20 + textSizeX, 24)
+		enabledPrinterCheckbox:SetValue(MattLib.Commands.PrinterFinder.Active)
+		enabledPrinterCheckbox.OnChange = function()
+			local value = enabledPrinterCheckbox:GetChecked()
+			MattLib.Commands.PrinterFinder.Active = value
+			Command_Functions.PrinterFinder(value)
+		end
+	end,
 }
 
 Command_Functions = {
 	PlayerHalos = function(bValue)
 		if bValue then
 			hook.Add( "PreDrawHalos", "PaintHalos_PlayerFinder", function()
-				halo.Add( player.GetAll(), Color(255,0,0), 2, 2, 5, true, true ) -- Renders all players through walls as red halos.
+				local alivePlayers = {}
+				for k, v in pairs(player.GetAll()) do 
+					if v:Alive() and v:Team() == LocalPlayer():Team() then table.insert(alivePlayers, v) end 
+				end
+				halo.Add( alivePlayers, Color(255,0,0), 2, 2, 5, true, true ) -- Renders all players through walls as red halos.
 			end )
 		else
 			hook.Remove("PreDrawHalos", "PaintHalos_PlayerFinder")
@@ -505,25 +642,92 @@ Command_Functions = {
 			hook.Add( "HUDPaint", "PaintInfo_PlayerFinder", function()
 				for k, v in pairs(player.GetAll()) do
 					if v == LocalPlayer() then continue end
-					local plyScreenPos = v:GetBonePosition(v:LookupBone("ValveBiped.Bip01_Head1")):ToScreen()
-					plyScreenPos.x = plyScreenPos.x - 40
-					local plyName = v:Nick()
-					draw.RoundedBox(0, plyScreenPos.x, plyScreenPos.y, 80, 20, Color(10, 10, 10, 150))
-					draw.SimpleText(plyName, "Trebuchet18", plyScreenPos.x + 40, plyScreenPos.y + 10, Color(255,255,255), 1, 1)
+					local boneId = v:LookupBone("ValveBiped.Bip01_Head1")
+					plyName = v:Nick()
+					if v:Alive() then
+							clr = Color(0, 255, 0, 255)
+						else
+							clr = Color(255, 0, 0, 255)
+						end
+					if boneId != nil and v:Alive() then
+						if MattLib.Commands.PlayerHalos.Teams == false then 
+							if v:Team() == LocalPlayer():Team() then
+								continue
+							end
+						end
+						local bone = v:GetBonePosition(boneId)
+						local plyScreenPos = bone:ToScreen()
+						plyScreenPos.x = plyScreenPos.x - 40
+						local plyName = v:Nick()
+						draw.RoundedBox(0, plyScreenPos.x, plyScreenPos.y, 80, 20, Color(10, 10, 10, 150))
+						draw.SimpleText(plyName, "Trebuchet18", plyScreenPos.x + 40, plyScreenPos.y + 10, clr, 1, 1)
+					else
+						local plyScreenPos = v:GetPos():ToScreen()
+						draw.RoundedBox(0, plyScreenPos.x, plyScreenPos.y, 80, 20, Color(10, 10, 10, 150))
+						draw.SimpleText(plyName, "Trebuchet18", plyScreenPos.x + 40, plyScreenPos.y + 10, clr, 1, 1)
+					end
 				end
 			end )
 		else
 			hook.Remove( "HUDPaint", "PaintInfo_PlayerFinder")
 		end
 	end,
-	PlayerESP = function()
-	
+	PropFinder = function(bValue)
+		if bValue then
+			print("[MattLib]: Prop Painter enabled!")
+			hook.Add( "DrawOverlay", "PaintInfo_PropFinder", function()
+				//Draw all players that aren't a valid player model
+				for _, v in pairs(player.GetAll()) do
+					local boneId = v:LookupBone("ValveBiped.Bip01_Head1") //If bone id doesn't exist, likely they're a prop.
+					if boneId == nil and v:Alive() then
+						local plyPos = v:GetPos():ToScreen()
+						surface.SetDrawColor(Color(255,150,0,150))
+						surface.DrawLine(ScrW()/2, ScrH()/2, plyPos.x, plyPos.y) //Draw line to them
+					else continue end
+				end
+				
+			end)
+		else
+			hook.Remove( "DrawOverlay", "PaintInfo_PropFinder")
+		end
+	end,
+	PrinterFinder = function(bValue)
+		if bValue then
+			print("[MattLib]: Printer Painter enabled!")
+			hook.Add( "DrawOverlay", "PaintInfo_PrinterFinder", function()
+				for _,ent in pairs(ents.GetAll()) do
+					if IsValid(ent) == false then continue end //Ignore invalid entities.
+					local entModel = ent:GetModel()
+					if entModel == MattLib.Settings.PRINTER_MODEL then
+						local entPos = ent:GetPos():ToScreen()
+						surface.SetDrawColor(Color(255,150,0,150))
+						surface.DrawLine(ScrW()/2, ScrH()/2, entPos.x, entPos.y) //Draw line to them
+					end
+				end
+			end)
+		else
+			hook.Remove("DrawOverlay", "PaintInfo_PrinterFinder")
+		end
 	end,
 }
 
+for _,v in pairs(player.GetAll()) do
+	v.HatTraitor = nil
+ end
+for _,v in pairs(ents.GetAll()) do
+	v.HatESPTracked = nil
+end
+
 Continuous_Functions = {
 	PlayerAimbot = function()
+		--Check if auto targeting is on
+		if MattLib.Commands.PlayerAimbot.AutoTarget then
+			local closestPlayer = MattLib:FindClosestPlayer()
+			MattLib.TargetPlayer = closestPlayer
+		end
+		
 		if MattLib.TargetPlayer == nil then
+			--User has not defined target
 			if (CurTime() - MattLib.LastWarn > 1) then
 				MattLib:AddChat(Color(255,0,0), "[MattLib]", Color(255,255,255), ": You have not selected a target!") 
 				MattLib.LastWarn = CurTime()
@@ -532,20 +736,81 @@ Continuous_Functions = {
 			-- Run command
 			local target = MattLib.TargetPlayer
 			if not IsValid(target) then return end
-			local tHeadPosition = target:GetBonePosition(target:LookupBone("ValveBiped.Bip01_Head1"))
+			local tHeadPosition = GetHeadPos(target)
 			local offSetAngle = (tHeadPosition - LocalPlayer():GetShootPos()):Angle()
 			LocalPlayer():SetEyeAngles(offSetAngle)
 		end	
 	end,
+	
+	TTTWeaponScanner = function()
+	/*
+		if MattLib.Commands.TTTWeaponScanner.Active then
+			if GAMEMODE.round_state == ROUND_ACTIVE then
+				
+			else
+				for _,v in pairs(player.GetAll()) do
+                    v.HatTraitor = nil
+                end
+                for _,v in pairs(ents.GetAll()) do
+					v.HatESPTracked = nil
+                end
+			end
+		end
+	*/
+	end,
 }
+
+-- MATTLIB HELPER FUNCTIONS --
+function MattLib:FindClosestPlayer()
+	local allPlayers = player.GetAll()
+	local botPlayers = player.GetBots()
+	table.Add(allPlayers, botPlayers)
+	local closestPlayer = nil
+	for k,ply in pairs(allPlayers) do
+		if ply == LocalPlayer() or ply:Alive() == false then continue end
+		if closestPlayer == nil then 
+			closestPlayer = ply 
+			continue
+		end
+		if LocalPlayer():GetPos():Distance(ply:GetPos()) < LocalPlayer():GetPos():Distance(closestPlayer:GetPos()) then closestPlayer = ply else continue end
+	end
+	return closestPlayer
+end
 
 -- HOOK ADDITIONS --
 
-
-
+hook.Add("PostDrawOpaqueRenderables", "wire_animations_idle", function()
+		if MattLib.Commands.TTTWeaponScanner.Active == false then return end
+        if GAMEMODE.round_state != ROUND_ACTIVE then
+                for _,v in pairs(player.GetAll()) do
+                        v.HatTraitor = nil
+                end
+                for _,v in pairs(ents.GetAll()) do
+                        v.HatESPTracked = nil
+                end
+                return
+        end
+        for _,v in pairs( ents.GetAll() ) do
+                if v and IsValid(v) and (table.HasValue(twep, v:GetClass()) and !v.HatESPTracked) then
+                        local pl = v.Owner
+                        if pl and IsValid(pl) and pl:IsTerror() then
+                                if pl:IsDetective() then
+                                        v.HatESPTracked = true
+                                else
+                                        v.HatESPTracked = true
+                                        pl.HatTraitor = true
+                                        chat.AddText( pl, Color(255,125,0), " is a ",Color(255,0,0), "TRAITOR",Color(255,125,0), " with a ",Color(255,0,0),v:GetClass().."!")
+                                end
+                        end
+                end
+        end
+          
+end)
 
 hook.Add( "Think", "MattLib_Tick", function(ply)
 	MattLib:HandleKeyBinds()
+	MattLib:HandleContinuousFunctions()
+	
 end )
 
 -- CONSOLE COMMANDS --
@@ -555,8 +820,19 @@ concommand.Add("MattLib_ShowGUI", function(ply, cmd, args)
 	print("[MattLib]: GUI Menu Opening")
 end )
 
+concommand.Add("MattLib_GetModel", function(ply, cmd, args)
+	
+	local eyeTrace = LocalPlayer():GetEyeTrace()
+	print(eyeTrace.Entity:GetModel())
+end )
 
+concommand.Add( "testent", function( ply )
+	local plyTr = ply:GetEyeTrace()
 
+	local csEnt = ents.CreateClientProp( "models/props_combine/combine_light001b.mdl" )
+	csEnt:SetPos( plyTr.HitPos + plyTr.HitNormal * 24 )
+	csEnt:Spawn()
+end )
 
 
 
@@ -577,10 +853,7 @@ function GetPlayerByPartName(namePart)
 			table.insert(foundPlayers, v)
 		end
 	end
-	print("Bots:")
-	PrintTable(player.GetBots())
 	for k,v in pairs(player.GetBots()) do
-		print("Bot Located: " .. v:Nick())
 		local found = string.find(string.lower(v:Nick()), string.lower(namePart))
 		if(found != nil) then
 			table.insert(foundPlayers, v)
@@ -602,3 +875,13 @@ function inQuad(fraction, beginning, change)
 	return change * (fraction ^ 2) + beginning
 end
 
+function GetHeadPos(ent)
+    local model = ent:GetModel() or ""
+    if model:find("crow") or model:find("seagull") or model:find("pigeon") then
+        return ent:LocalToWorld(ent:OBBCenter() + Vector(0,0,-5))
+    elseif ent:GetAttachment(ent:LookupAttachment("eyes")) ~= nil then
+        return ent:GetAttachment(ent:LookupAttachment("eyes")).Pos
+    else
+        return ent:LocalToWorld(ent:OBBCenter())
+    end
+end

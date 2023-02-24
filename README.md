@@ -1,6 +1,13 @@
 # GarrysMod-MattLibClient
 A simple client used for abusing gamemodes on Garry's mod servers.
 
+# Features
+1. Prop detection for prop hunt.
+2. Traitor detector for TTT.
+3. Aimbot for individual players or closest target (I think)
+4. Wall hack / player halos through walls.
+5. Dark RP money printer detector. (Note: You will need to change the printer model - on line 4 (Settings.PRINTER_MODEL) - to be the one used on the server you're playing on. Don't get it? Figure it out, rip.)
+
 ## Installation
 1. Download the chicken.lua file.
 2. Navigate to your "/Steam/steamapps/common/Garrysmod/garrysmod/lua/" folder, and copy the chicken.lua file there.
@@ -29,8 +36,11 @@ A simple client used for abusing gamemodes on Garry's mod servers.
 5. If all done correctly, double tapping control rapidly will open the client!
 
 ### The rest of the client should be pretty self explainitory to use :). Have fun cheating.
+<<<<<<< Updated upstream
 
 ## Coming features
 1. Prop detection for prop hunt.
 2. Traitor detector for TTT.
 These are both actually done, but they're on my other computer and can't be bothered getting them yet. Send and issue if you really want me to update.
+=======
+>>>>>>> Stashed changes
